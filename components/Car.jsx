@@ -156,27 +156,27 @@ export const Car = forwardRef(function Car(
 
 
 
-    /* ------ MOBILE ------*/
-
-    const t = touchRef?.current
-    if (t) {
-        input.current.forward = t.moveY < -0.25
-        input.current.backward = t.moveY > 0.25
-        input.current.left = t.moveX < -0.25
-        input.current.right = t.moveX > 0.25
-        input.current.boost = !!t.boost
-        input.current.drift = !!t.drift
-
-        // E pour sortir
-        if (!carRef.current.userData._prevInteract) carRef.current.userData._prevInteract = false
-        const rising = t.interact && !carRef.current.userData._prevInteract
-        carRef.current.userData._prevInteract = t.interact
-        if (rising) setControlMode?.('player')
-    }
 
     /* ---------- LOOP ---------- */
     useFrame((_, delta) => {
         if (!carRef.current || !enabled) return
+
+        // ----- MOBILE (lecture temps réel) -----
+        const t = touchRef?.current
+        if (t) {
+            input.current.forward = t.moveY < -0.25
+            input.current.backward = t.moveY > 0.25
+            input.current.left = t.moveX < -0.25
+            input.current.right = t.moveX > 0.25
+            input.current.boost = !!t.boost
+            input.current.drift = !!t.drift
+
+            // Interact : sortie voiture (front montant)
+            const rising = t.interact && !prevInteract.current
+            prevInteract.current = t.interact
+            if (rising) setControlMode?.('player')
+        }
+
 
         // ✅ Sol : ancien fonctionnement robuste (fallback)
         const groundTargets =

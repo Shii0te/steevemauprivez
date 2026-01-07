@@ -39,6 +39,8 @@ export const Player = forwardRef(function Player(
     const vCarRight = useRef(new THREE.Vector3())
     const vTargetPos = useRef(new THREE.Vector3())
     const vTmp = useRef(new THREE.Vector3())
+    const prevInteract = useRef(false)
+
 
     const GRAVITY = 30
     const PLAYER_HEIGHT = 1.6
@@ -273,17 +275,40 @@ export const Player = forwardRef(function Player(
     useFrame((_, delta) => {
         if (paused) return
 
-        const t = touchRef?.current
+        const t = touchRef?.current || null
 
-        // LOOK tactile (consommer les deltas)
-        if (t) {
-            yaw.current -= t.lookDX * sensitivity
-            pitch.current -= t.lookDY * sensitivity
+        // --- LOOK mobile (caméra) ---
+        if (t && (t.lookDX !== 0 || t.lookDY !== 0)) {
+            if (controlMode === 'car') {
+                carCamYaw.current -= t.lookDX * sensitivity
+                carCamPitch.current -= t.lookDY * sensitivity
+
+                carCamPitch.current = Math.max(
+                    CAR_CAM_MIN_PITCH,
+                    Math.min(CAR_CAM_MAX_PITCH, carCamPitch.current)
+                )
+            } else {
+                yaw.current -= t.lookDX * sensitivity
+                pitch.current -= t.lookDY * sensitivity
+                pitch.current = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch.current))
+            }
+
+            // ✅ très important : on consomme le delta
             t.lookDX = 0
             t.lookDY = 0
-
-            pitch.current = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch.current))
         }
+
+        // --- INTERACT mobile (front montant) ---
+        const risingInteract = !!(t && t.interact && !prevInteract.current)
+        if (t) prevInteract.current = t.interact
+
+        // Sortir de la voiture
+        if (controlMode === 'car' && risingInteract) {
+            setControlMode('player')
+        }
+
+
+
 
         // ========= CAR CAMERA =========
         if (controlMode === 'car' && carRef.current) {
@@ -351,21 +376,18 @@ export const Player = forwardRef(function Player(
             if (t.jump && isGrounded.current) {
                 velocityY.current = JUMP_FORCE
                 isGrounded.current = false
+                t.jump = false // ✅ consomme le saut
             }
 
-            // Interact (E) -> entrer voiture
-            // (edge detect)
-            if (!Player._prevInteract) Player._prevInteract = { v: false }
-            const prev = Player._prevInteract
-            const rising = t.interact && !prev.v
-            prev.v = t.interact
 
-            if (rising && controlMode === 'player') {
+            if (risingInteract) {
                 const car = scene.getObjectByName('CarRoot')
                 if (car && camera.position.distanceTo(car.position) < 2) {
                     setControlMode('car')
                 }
             }
+
+
         }
 
         // move dir

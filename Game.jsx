@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Map } from './components/Map'
 import { Player } from './components/Player'
 import { Car } from './components/Car'
+import MobileControls from './components/MobileControls'
+
 
 
 export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
@@ -14,6 +16,8 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
     const [sensitivity, setSensitivity] = useState(0.005)
     const playerRef = useRef(null)
     const carRef = useRef()
+    const prevInteract = useRef(false)
+
 
     const [worldColliders, setWorldColliders] = useState({
         ground: [],
@@ -51,7 +55,7 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
     const restart = () => {
         playerRef.current?.reset()
         setPaused(false)
-        canvasRef.current?.requestPointerLock()
+        if (!isTouch) canvasRef.current?.requestPointerLock?.()
     }
 
     useEffect(() => {
@@ -104,8 +108,11 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
 
     const resume = () => {
         setPaused(false)
-        canvasRef.current.requestPointerLock()
+        if (!isTouch) canvasRef.current?.requestPointerLock?.()
     }
+
+
+
 
     const [inputState, setInputState] = useState({
         forward: false,
@@ -229,7 +236,11 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
             )}
 
             {isTouch && !paused && (
-                <MobileControls touchRef={touchRef} mode={controlMode} />
+                <MobileControls
+                    touchRef={touchRef}
+                    mode={controlMode}
+                    onPause={() => setPaused(true)}
+                />
             )}
 
 
@@ -239,6 +250,7 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
                 ref={canvasRef}
                 shadows
                 gl={{ antialias: true }}
+                style={{ touchAction: 'none' }}
                 camera={{ position: [0, 5, 20], fov: 60 }}
             >
 
@@ -280,6 +292,7 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
                     setControlMode={setControlMode}
                     carRef={carRef}
                     groundColliders={worldColliders.ground}
+                    touchRef={isTouch ? touchRef : null}
                 />
 
                 <Car
@@ -289,6 +302,7 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
                     setControlMode={setControlMode}
                     groundColliders={worldColliders.ground}
                     wallColliders={worldColliders.walls}
+                    touchRef={isTouch ? touchRef : null}
                 />
 
                 <Stats />
@@ -296,3 +310,5 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
         </>
     )
 }
+
+

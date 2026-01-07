@@ -449,3 +449,46 @@ canvas { touch-action: none; }
   font-weight: 800;
   touch-action: none;
 }
+
+/* bouton MENU en haut */
+.touch-top{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  pointer-events: auto;
+  z-index: 16;
+}
+
+.touch-btn.small{
+  width: 74px;
+  height: 38px;
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
+/* panneau pause adapté téléphone */
+@media (max-width: 768px){
+  .pause-panel{
+    width: min(92vw, 380px);
+    padding: 22px;
+  }
+  .joy-zone{
+    width: 130px;
+    height: 130px;
+  }
+  .touch-btn{
+    width: 84px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 420px){
+  .joy-zone{
+    width: 118px;
+    height: 118px;
+  }
+  .touch-btn{
+    width: 78px;
+    height: 40px;
+  }
+}
