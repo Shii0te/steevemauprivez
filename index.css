@@ -1,0 +1,451 @@
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* couleurs */
+
+  --color-primary: #559cff;
+  --color-primary-dark: #1e54b8;
+  --color-button-hover-shadow: #559cffcc;
+  --color-background: #0e0e11;
+  --color-panel-background: #141419e6;
+  --color-text: #f5f5f5;
+  --color-button-bg: #3a3a3a;
+
+
+}
+
+.home {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  background: #0e0e11;
+  color: var(--color-text);
+}
+
+.home button {
+  padding: 12px 24px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+canvas {
+  cursor: crosshair;
+}
+
+body:has(canvas:focus) canvas {
+  cursor: none;
+}
+
+
+.click-to-play {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--color-text);
+
+  background: var(--color-panel-background);
+  backdrop-filter: blur(2px);
+
+  pointer-events: none; /* IMPORTANT */
+  z-index: 10;
+}
+
+/* ---------------- MENU PAUSE ---------------- */
+
+.pause-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+
+  background: var(--color-panel-background);
+  backdrop-filter: blur(4px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+
+  color: var(--color-text);
+}
+
+
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+
+  background: var(--color-panel-background);
+  backdrop-filter: blur(4px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Panneau principal */
+.pause-panel {
+  width: 380px;
+  padding: 32px;
+
+  background: rgba(20, 20, 25, 0.9);
+  border-radius: 18px;
+
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+
+  transform: rotateX(4deg);
+}
+
+/* TITRE */
+.pause-title {
+  text-align: center;
+  margin-bottom: 24px;
+
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+
+  color: var(--color-primary);
+  text-shadow:
+    0 3px 0 var(--color-primary-dark),
+    0 8px 20px var(--color-panel-background);
+}
+
+/* SENSIBILITÉ */
+.pause-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.pause-setting input[type="range"] {
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+}
+
+.pause-setting input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--color-text);
+  cursor: pointer;
+}
+
+/* ACTIONS */
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn {
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Bouton principal */
+.btn.primary {
+  background: var(--color-primary);
+  color: #1b1b1b;
+  box-shadow: 0 6px 0 var(--color-primary-dark);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 var(--color-primary-dark);
+}
+
+/* Bouton secondaire */
+.btn {
+  background: var(--color-button-bg);
+  color: var(--color-text);
+}
+
+/* Bouton discret */
+.btn.ghost {
+  background: transparent;
+  color: #ccc;
+}
+
+.keybind-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.keybind {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  background: #333;
+  color: var(--color-text);
+  border: none;
+  cursor: pointer;
+}
+
+.keybind.waiting {
+  background: var(--color-primary);
+  color: #1b1b1b;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+
+
+/* ---------------- HUD ---------------- */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* --- Déplacements --- */
+.hud-move {
+  position: absolute;
+  bottom: 32px;
+  left: 32px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  gap: 6px;
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.key {
+  min-width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(20, 20, 25, 0.85);
+  border-radius: 6px;
+
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--color-primary);
+
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.key.wide {
+  min-width: 72px;
+}
+
+
+/* Extra touches */
+.hud-extra {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* --- Menu --- */
+.hud-menu {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: rgba(20, 20, 25, 0.85);
+  padding: 8px 12px;
+  border-radius: 8px;
+
+  box-shadow:
+    0 6px 0 rgba(0, 0, 0, 0.6);
+}
+
+.hud-keys{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mouseG{
+  border-radius: 8px 0 0 0;
+  width: 40px;
+}
+
+.mouseR{
+  border-radius: 0 8px 0 0;
+  width: 40px;
+}
+
+.mouseBody{
+  border-radius: 0 0 8px 8px;
+  width: 80px;
+  height: 55px;
+}
+.hud-label {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.hud-mouse {
+  display: flex;
+}
+
+/* Touche active */
+.key.active {
+  background: var(--color-primary);
+  color: #1b1b1b;
+
+  box-shadow:
+    0 4px 0 var(--color-primary-dark),
+    0 0 12px var(--color-button-hover-shadow);
+}
+
+/* --- Icônes état --- */
+.hud-status {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+
+  display: flex;
+  gap: 12px;
+}
+
+.status {
+  font-size: 1.6rem;
+  opacity: 0.25;
+  transform: scale(0.9);
+  transition: all 0.15s ease;
+}
+
+.status.on {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* --- Réticule --- */
+.crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  z-index: 6;
+}
+
+
+
+/* ------ MOBILE ------ */
+
+canvas { touch-action: none; }
+
+.mobile-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none; /* important : on active uniquement certaines zones */
+}
+
+.look-zone {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 55%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joy-zone {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  width: 140px;
+  height: 140px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joy-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(20, 20, 25, 0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.touch-buttons {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.touch-btn {
+  width: 88px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(20, 20, 25, 0.35);
+  color: #fff;
+  font-weight: 800;
+  touch-action: none;
+}
