@@ -1,229 +1,298 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { Stats, AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
+import { Stats, Sky, AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import { useEffect, useRef, useState } from 'react'
 
 import { Map } from './components/Map'
 import { Player } from './components/Player'
 import { Car } from './components/Car'
 
-// ⚠️ IMPORTANT : assure-toi d'importer MobileControls si tu l'utilises
-// import { MobileControls } from './components/MobileControls'
 
 export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
-  const canvasRef = useRef(null)
+    const canvasRef = useRef()
+    const [hasControl, setHasControl] = useState(false)
+    const [paused, setPaused] = useState(false)
+    const [sensitivity, setSensitivity] = useState(0.005)
+    const playerRef = useRef(null)
+    const carRef = useRef()
 
-  const [hasControl, setHasControl] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const [sensitivity, setSensitivity] = useState(0.005)
+    const [worldColliders, setWorldColliders] = useState({
+        ground: [],
+        walls: []
+    })
 
-  const playerRef = useRef(null)
-  const carRef = useRef(null)
+    function WorldColliders({ onReady }) {
+        const { scene } = useThree()
 
-  const [worldColliders, setWorldColliders] = useState({
-    ground: [],
-    walls: []
-  })
+        useEffect(() => {
+            const ground = []
+            const walls = []
 
-  // ✅ DOIT ÊTRE DÉCLARÉ AVANT LES useEffect QUI L'UTILISENT
-  const isTouch =
-    typeof window !== 'undefined' &&
-    ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+            scene.traverse((obj) => {
+                if (!obj.isObject3D) return
+                if (obj.userData?.isGround) ground.push(obj)
+                if (obj.userData?.isCollider) walls.push(obj)
+            })
 
-  const touchRef = useRef({
-    moveX: 0,
-    moveY: 0,
-    lookDX: 0,
-    lookDY: 0,
-    jump: false,
-    sprint: false,
-    interact: false,
-    boost: false,
-    drift: false
-  })
+            onReady({ ground, walls })
+        }, [scene, onReady])
 
-  function WorldColliders({ onReady }) {
-    const { scene } = useThree()
+        return null
+    }
+
+
+    const goMainMenu = () => {
+        // libère la souris + ferme le jeu
+        setPaused(false)
+        document.exitPointerLock()
+        onMainMenu?.()
+        window.location.reload();
+    }
+
+    const restart = () => {
+        playerRef.current?.reset()
+        setPaused(false)
+        canvasRef.current?.requestPointerLock()
+    }
 
     useEffect(() => {
-      const ground = []
-      const walls = []
+        const canvas = canvasRef.current
+        if (!canvas) return
 
-      scene.traverse((obj) => {
-        if (!obj.isObject3D) return
-        if (obj.userData?.isGround) ground.push(obj)
-        if (obj.userData?.isCollider) walls.push(obj)
-      })
+        if (isTouch) {
+            setHasControl(true)
+            setPaused(false)
+            return
+        }
 
-      onReady({ ground, walls })
-    }, [scene, onReady])
+        const requestLock = () => {
+            if (!paused && document.pointerLockElement !== canvas) {
+                canvas.requestPointerLock()
+            }
+        }
 
-    return null
-  }
+        const onLockChange = () => {
+            const locked = document.pointerLockElement === canvas
+            setHasControl(locked)
+            if (!locked) setPaused(true)
+        }
 
-  const goMainMenu = () => {
-    setPaused(false)
-    document.exitPointerLock?.()
-    onMainMenu?.()
-    window.location.reload()
-  }
+        const onKeyDown = (e) => {
+            if (e.code === 'KeyP') {
+                e.preventDefault()
+                setPaused(true)
+                document.exitPointerLock()
+            }
+        }
 
-  const restart = () => {
-    playerRef.current?.reset()
-    setPaused(false)
-    // pointerLock seulement desktop
-    if (!isTouch) canvasRef.current?.requestPointerLock?.()
-  }
+        if (autoLock) {
+            canvas.requestPointerLock()
+            onAutoLockDone?.()
+        }
 
-  const resume = () => {
-    setPaused(false)
-    if (!isTouch) canvasRef.current?.requestPointerLock?.()
-  }
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+        canvas.addEventListener('click', requestLock)
+        document.addEventListener('pointerlockchange', onLockChange)
+        window.addEventListener('keydown', onKeyDown)
 
-    // ✅ MOBILE : pas de pointer lock => on considère que tu as le contrôle
-    if (isTouch) {
-      setHasControl(true)
-      setPaused(false)
-      return
+        return () => {
+            canvas.removeEventListener('click', requestLock)
+            document.removeEventListener('pointerlockchange', onLockChange)
+            window.removeEventListener('keydown', onKeyDown)
+        }
+    }, [paused])
+
+
+    const resume = () => {
+        setPaused(false)
+        canvasRef.current.requestPointerLock()
     }
 
-    const requestLock = () => {
-      if (paused) return
-      if (document.pointerLockElement === canvas) return
-      if (typeof canvas.requestPointerLock !== 'function') return
-      canvas.requestPointerLock()
-    }
+    const [inputState, setInputState] = useState({
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+        sprint: false,
+        jump: false,
+        mouseLeft: false,
+        mouseRight: false
+    })
 
-    const onLockChange = () => {
-      const locked = document.pointerLockElement === canvas
-      setHasControl(locked)
-      if (!locked) setPaused(true)
-    }
+    // 'player' | 'car'
+    const [controlMode, setControlMode] = useState('player')
 
-    const onKeyDown = (e) => {
-      if (e.code === 'KeyP') {
-        e.preventDefault()
-        setPaused(true)
-        document.exitPointerLock?.()
-      }
-    }
 
-    if (autoLock && typeof canvas.requestPointerLock === 'function') {
-      canvas.requestPointerLock()
-      onAutoLockDone?.()
-    }
+    /* ------ MOBILE ------ */
 
-    canvas.addEventListener('click', requestLock)
-    document.addEventListener('pointerlockchange', onLockChange)
-    window.addEventListener('keydown', onKeyDown)
+    const isTouch =
+        typeof window !== 'undefined' &&
+        ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
-    return () => {
-      canvas.removeEventListener('click', requestLock)
-      document.removeEventListener('pointerlockchange', onLockChange)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [paused, autoLock, onAutoLockDone, isTouch])
+    const touchRef = useRef({
+        moveX: 0,   // -1..1 (gauche/droite)
+        moveY: 0,   // -1..1 (haut/bas)
+        lookDX: 0,  // delta pixels (consommé par Player)
+        lookDY: 0,
+        jump: false,
+        sprint: false,
+        interact: false,
+        boost: false,
+        drift: false
+    })
 
-  const [inputState, setInputState] = useState({
-    forward: false,
-    backward: false,
-    left: false,
-    right: false,
-    sprint: false,
-    jump: false,
-    mouseLeft: false,
-    mouseRight: false
-  })
 
-  const [controlMode, setControlMode] = useState('player')
+    return (
+        <>
+            {hasControl && !paused && <div className="crosshair" />}
 
-  return (
-    <>
-      {hasControl && !paused && !isTouch && <div className="crosshair" />}
 
-      {paused && (
-        <div className="pause-overlay">
-          <div className="pause-panel">
-            <h1 className="pause-title">PAUSE</h1>
+            {/* MENU PAUSE */}
+            {paused && (
+                <div className="pause-overlay">
+                    <div className="pause-panel">
 
-            <div className="pause-setting">
-              <span>SENSIBILITÉ</span>
-              <input
-                type="range"
-                min="0.001"
-                max="0.02"
-                step="0.001"
-                value={sensitivity}
-                onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-              />
-            </div>
+                        <h1 className="pause-title">PAUSE</h1>
 
-            <div className="pause-actions">
-              <button className="btn primary" onClick={resume}>Reprendre</button>
-              <button className="btn" onClick={goMainMenu}>Menu principal</button>
-              <button className="btn ghost" onClick={restart}>Restart</button>
-            </div>
-          </div>
-        </div>
-      )}
+                        <div className="pause-setting">
+                            <span>SENSIBILITÉ</span>
+                            <input
+                                type="range"
+                                min="0.001"
+                                max="0.02"
+                                step="0.001"
+                                value={sensitivity}
+                                onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                            />
+                        </div>
 
-      {/* HUD PC uniquement */}
-      {!isTouch && !paused && hasControl && (
-        <div className="hud">
-          {/* ton HUD ici */}
-        </div>
-      )}
+                        <div className="pause-actions">
+                            <button className="btn primary" onClick={resume}> Reprendre </button>
 
-      {/* HUD Mobile : seulement si MobileControls existe */}
-      {/* {isTouch && !paused && (
-        <MobileControls touchRef={touchRef} mode={controlMode} />
-      )} */}
+                            <button className="btn" onClick={goMainMenu}> Menu principal </button>
 
-      <Canvas
-        ref={canvasRef}
-        shadows
-        gl={{ antialias: true }}
-        camera={{ position: [0, 5, 20], fov: 60 }}
-      >
-        <color attach="background" args={['#2c8cf3ff']} />
 
-        <ambientLight intensity={0.55} color="#e6f1ff" />
-        <directionalLight position={[10, 80, 10]} intensity={1.25} color="#fff4e0" castShadow />
-        <directionalLight position={[-30, 20, -20]} intensity={0.35} color="#d9e6ff" />
+                            <button className="btn ghost" onClick={restart}> Restart </button>
 
-        <PerformanceMonitor />
-        <AdaptiveDpr />
+                        </div>
 
-        <WorldColliders onReady={setWorldColliders} />
+                    </div>
+                </div>
+            )}
 
-        <Map />
+            {!isTouch && !paused && hasControl && (
+                <div className="hud">
 
-        <Player
-          ref={playerRef}
-          paused={paused}
-          sensitivity={sensitivity}
-          onInputChange={setInputState}
-          controlMode={controlMode}
-          setControlMode={setControlMode}
-          groundColliders={worldColliders.ground}
-          touchRef={isTouch ? touchRef : null}
-        />
+                    <div className="hud-move">
+                        <div className="hud-keys">
+                            <div className="key-row">
+                                <span className={`key ${inputState.forward ? 'active' : ''}`}>Z/W</span>
+                            </div>
 
-        <Car
-          ref={carRef}
-          position={[78, 5, 2]}
-          enabled={controlMode === 'car'}
-          setControlMode={setControlMode}
-          groundColliders={worldColliders.ground}
-          wallColliders={worldColliders.walls}
-          touchRef={isTouch ? touchRef : null}
-        />
+                            <div className="key-row">
+                                <span className={`key ${inputState.left ? 'active' : ''}`}>Q/A</span>
+                                <span className={`key ${inputState.backward ? 'active' : ''}`}>S</span>
+                                <span className={`key ${inputState.right ? 'active' : ''}`}>D</span>
+                            </div>
 
-        <Stats />
-      </Canvas>
-    </>
-  )
+                            <div className="hud-extra">
+                                <span className={`key wide ${inputState.sprint ? 'active' : ''}`}>
+                                    SHIFT
+                                </span>
+                                <span className={`key wide ${inputState.jump ? 'active' : ''}`}>
+                                    ESPACE
+                                </span>
+                            </div>
+                        </div>
+                        <div className="mouse">
+                            <div className="hud-mouse">
+                                <span className={`key mouseG ${inputState.mouseLeft ? 'active' : ''}`}> G</span>
+                                <span className={`key mouseR ${inputState.mouseRight ? 'active' : ''}`}> D</span>
+                            </div>
+                            <span className={`key wide mouseBody`}></span>
+                        </div>
+
+
+                    </div>
+
+                    <div className="hud-menu">
+                        <span className="key">P</span>
+                        <span className="hud-label">Menu</span>
+                    </div>
+
+                    {/* Icônes état */}
+                    <div className="hud-status">
+                        <span className={`status ${inputState.sprint ? 'on' : ''}`}></span>
+                        <span className={`status ${inputState.jump ? 'on' : ''}`}></span>
+                    </div>
+
+                </div>
+            )}
+
+            {isTouch && !paused && (
+                <MobileControls touchRef={touchRef} mode={controlMode} />
+            )}
+
+
+
+
+            <Canvas
+                ref={canvasRef}
+                shadows
+                gl={{ antialias: true }}
+                camera={{ position: [0, 5, 20], fov: 60 }}
+            >
+
+                {/* Rendu */}
+
+                {/* FOND BLEU CIEL */}
+                <color attach="background" args={['#2c8cf3ff']} />
+
+
+                {/* LUMIÈRES */}
+                <ambientLight intensity={0.55} color="#e6f1ff" />
+
+                <directionalLight
+                    position={[10, 80, 10]}
+                    intensity={1.25}
+                    color="#fff4e0"
+                    castShadow
+                />
+
+                <directionalLight
+                    position={[-30, 20, -20]}
+                    intensity={0.35}
+                    color="#d9e6ff"
+                />
+
+                <PerformanceMonitor />
+                <AdaptiveDpr />
+
+                {/* eléments */}
+                <WorldColliders onReady={setWorldColliders} />
+
+                <Map />
+                <Player
+                    ref={playerRef}
+                    paused={paused}
+                    sensitivity={sensitivity}
+                    onInputChange={setInputState}
+                    controlMode={controlMode}
+                    setControlMode={setControlMode}
+                    carRef={carRef}
+                    groundColliders={worldColliders.ground}
+                />
+
+                <Car
+                    ref={carRef}
+                    position={[78, 5, 2]}
+                    enabled={controlMode === 'car'}
+                    setControlMode={setControlMode}
+                    groundColliders={worldColliders.ground}
+                    wallColliders={worldColliders.walls}
+                />
+
+                <Stats />
+            </Canvas>
+        </>
+    )
 }
