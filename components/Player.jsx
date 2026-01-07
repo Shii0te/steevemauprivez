@@ -105,6 +105,9 @@ export const Player = forwardRef(function Player(
 
     const CAR_CAM_RETURN_SPEED = 1.5
 
+
+
+
     useEffect(() => {
         carRef.current = scene.getObjectByName('CarRoot')
     }, [scene])
@@ -307,7 +310,9 @@ export const Player = forwardRef(function Player(
             setControlMode('player')
         }
 
-
+        if (controlMode === 'car' && !carRef.current) {
+            carRef.current = scene.getObjectByName('CarRoot')
+        }
 
 
         // ========= CAR CAMERA =========

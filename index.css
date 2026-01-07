@@ -2,7 +2,6 @@ html, body, #root {
   width: 100%;
   height: 100%;
   margin: 0;
-  overflow: hidden;
 }
 
 :root {
@@ -465,6 +464,12 @@ canvas { touch-action: none; }
   font-size: 0.85rem;
   border-radius: 10px;
 }
+
+.touch-btn.active{
+  outline: 2px solid rgba(255,255,255,0.55);
+  background: rgba(0,0,0,0.55);
+}
+
 
 /* panneau pause adapté téléphone */
 @media (max-width: 768px){

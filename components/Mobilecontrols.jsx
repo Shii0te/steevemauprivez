@@ -1,163 +1,208 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function MobileControls({ touchRef, mode, onPause }) {
-  const joyRef = useRef(null)
-  const joyPointerId = useRef(null)
+    const joyRef = useRef(null)
+    const joyPointerId = useRef(null)
 
-  const joyCenter = useRef({ x: 0, y: 0 })
-  const joyRadius = useRef(60)
+    const joyCenter = useRef({ x: 0, y: 0 })
+    const joyRadius = useRef(60)
 
-  const lookPointerId = useRef(null)
-  const lookLast = useRef({ x: 0, y: 0 })
+    const lookPointerId = useRef(null)
+    const lookLast = useRef({ x: 0, y: 0 })
 
-  const setFlag = (key, v) => {
-    if (!touchRef?.current) return
-    touchRef.current[key] = v
-  }
-
-  const onJoyDown = (e) => {
-    e.preventDefault()
-    if (joyPointerId.current !== null) return
-    joyPointerId.current = e.pointerId
-
-    const rect = joyRef.current?.getBoundingClientRect()
-    if (rect) {
-      joyCenter.current = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-      joyRadius.current = Math.min(rect.width, rect.height) / 2
+    const setFlag = (key, v) => {
+        if (!touchRef?.current) return
+        touchRef.current[key] = v
     }
 
-    onJoyMove(e)
-  }
+    const onJoyDown = (e) => {
+        e.preventDefault()
+        if (joyPointerId.current !== null) return
+        joyPointerId.current = e.pointerId
 
-  const onJoyMove = (e) => {
-    if (joyPointerId.current !== e.pointerId) return
-    e.preventDefault()
+        const rect = joyRef.current?.getBoundingClientRect()
+        if (rect) {
+            joyCenter.current = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+            joyRadius.current = Math.min(rect.width, rect.height) / 2
+        }
 
-    const dx = e.clientX - joyCenter.current.x
-    const dy = e.clientY - joyCenter.current.y
+        onJoyMove(e)
+    }
 
-    const r = joyRadius.current || 60
-    const len = Math.hypot(dx, dy)
-    const k = len > r ? r / len : 1
+    const onJoyMove = (e) => {
+        if (joyPointerId.current !== e.pointerId) return
+        e.preventDefault()
 
-    const nx = (dx * k) / r
-    const ny = (dy * k) / r
+        const dx = e.clientX - joyCenter.current.x
+        const dy = e.clientY - joyCenter.current.y
 
-    touchRef.current.moveX = nx
-    touchRef.current.moveY = ny
-  }
+        const r = joyRadius.current || 60
+        const len = Math.hypot(dx, dy)
+        const k = len > r ? r / len : 1
 
-  const onJoyUp = (e) => {
-    if (joyPointerId.current !== e.pointerId) return
-    e.preventDefault()
-    joyPointerId.current = null
-    touchRef.current.moveX = 0
-    touchRef.current.moveY = 0
-  }
+        const nx = (dx * k) / r
+        const ny = (dy * k) / r
 
-  const onLookDown = (e) => {
-    e.preventDefault()
-    if (lookPointerId.current !== null) return
-    lookPointerId.current = e.pointerId
-    lookLast.current = { x: e.clientX, y: e.clientY }
-  }
+        touchRef.current.moveX = nx
+        touchRef.current.moveY = ny
+    }
 
-  const onLookMove = (e) => {
-    if (lookPointerId.current !== e.pointerId) return
-    e.preventDefault()
+    const onJoyUp = (e) => {
+        if (joyPointerId.current !== e.pointerId) return
+        e.preventDefault()
+        joyPointerId.current = null
+        touchRef.current.moveX = 0
+        touchRef.current.moveY = 0
+    }
 
-    const dx = e.clientX - lookLast.current.x
-    const dy = e.clientY - lookLast.current.y
-    lookLast.current = { x: e.clientX, y: e.clientY }
+    const onLookDown = (e) => {
+        e.preventDefault()
+        if (lookPointerId.current !== null) return
+        lookPointerId.current = e.pointerId
+        lookLast.current = { x: e.clientX, y: e.clientY }
+    }
 
-    touchRef.current.lookDX += dx
-    touchRef.current.lookDY += dy
-  }
+    const onLookMove = (e) => {
+        if (lookPointerId.current !== e.pointerId) return
+        e.preventDefault()
 
-  const onLookUp = (e) => {
-    if (lookPointerId.current !== e.pointerId) return
-    e.preventDefault()
-    lookPointerId.current = null
-  }
+        const dx = e.clientX - lookLast.current.x
+        const dy = e.clientY - lookLast.current.y
+        lookLast.current = { x: e.clientX, y: e.clientY }
 
-  const press = (key) => (e) => {
-    e.preventDefault()
-    setFlag(key, true)
-  }
+        touchRef.current.lookDX += dx
+        touchRef.current.lookDY += dy
+    }
 
-  const release = (key) => (e) => {
-    e.preventDefault()
-    setFlag(key, false)
-  }
+    const onLookUp = (e) => {
+        if (lookPointerId.current !== e.pointerId) return
+        e.preventDefault()
+        lookPointerId.current = null
+    }
 
-  const interactLabel = mode === 'car' ? 'SORTIR' : 'ENTRER'
-  const mainActionLabel = mode === 'car' ? 'BOOST' : 'SAUT'
-  const mainActionKey = mode === 'car' ? 'boost' : 'jump'
+    const press = (key) => (e) => {
+        e.preventDefault()
+        setFlag(key, true)
+    }
 
-  return (
-    <div className="mobile-controls">
-      <div className="touch-top">
-        <button className="touch-btn small" onClick={onPause}>MENU</button>
-      </div>
+    const release = (key) => (e) => {
+        e.preventDefault()
+        setFlag(key, false)
+    }
 
-      <div
-        className="look-zone"
-        onPointerDown={onLookDown}
-        onPointerMove={onLookMove}
-        onPointerUp={onLookUp}
-        onPointerCancel={onLookUp}
-      />
+    const interactLabel = mode === 'car' ? 'SORTIR' : 'ENTRER'
 
-      <div
-        ref={joyRef}
-        className="joy-zone"
-        onPointerDown={onJoyDown}
-        onPointerMove={onJoyMove}
-        onPointerUp={onJoyUp}
-        onPointerCancel={onJoyUp}
-      >
-        <div className="joy-base" />
-      </div>
+    const [runLocked, setRunLocked] = useState(false)
+    const [boostLocked, setBoostLocked] = useState(false)
 
-      <div className="touch-buttons">
-        <button
-          className="touch-btn"
-          onPointerDown={press(mainActionKey)}
-          onPointerUp={release(mainActionKey)}
-          onPointerCancel={release(mainActionKey)}
-        >
-          {mainActionLabel}
-        </button>
+    useEffect(() => {
+        // reset quand on change de mode
+        setRunLocked(false)
+        setBoostLocked(false)
+        if (touchRef?.current) {
+            touchRef.current.sprint = false
+            touchRef.current.boost = false
+        }
+    }, [mode])
 
-        <button
-          className="touch-btn"
-          onPointerDown={press('sprint')}
-          onPointerUp={release('sprint')}
-          onPointerCancel={release('sprint')}
-        >
-          RUN
-        </button>
 
-        <button
-          className="touch-btn"
-          onPointerDown={press('interact')}
-          onPointerUp={release('interact')}
-          onPointerCancel={release('interact')}
-        >
-          {interactLabel}
-        </button>
+    return (
+        <div className="mobile-controls">
+            <div className="touch-top">
+                <button className="touch-btn small" onClick={onPause}>MENU</button>
+            </div>
 
-        {mode === 'car' && (
-          <button
-            className="touch-btn"
-            onPointerDown={press('drift')}
-            onPointerUp={release('drift')}
-            onPointerCancel={release('drift')}
-          >
-            DRIFT
-          </button>
-        )}
-      </div>
-    </div>
-  )
+            <div
+                className="look-zone"
+                onPointerDown={onLookDown}
+                onPointerMove={onLookMove}
+                onPointerUp={onLookUp}
+                onPointerCancel={onLookUp}
+            />
+
+            <div
+                ref={joyRef}
+                className="joy-zone"
+                onPointerDown={onJoyDown}
+                onPointerMove={onJoyMove}
+                onPointerUp={onJoyUp}
+                onPointerCancel={onJoyUp}
+            >
+                <div className="joy-base" />
+            </div>
+
+            <div className="touch-buttons">
+                {/* SAUT (à pied uniquement) */}
+                {mode !== 'car' && (
+                    <button
+                        className="touch-btn"
+                        onPointerDown={press('jump')}
+                        onPointerUp={release('jump')}
+                        onPointerCancel={release('jump')}
+                    >
+                        SAUT
+                    </button>
+                )}
+
+                {/* RUN en toggle (à pied uniquement) */}
+                {mode !== 'car' && (
+                    <button
+                        className={`touch-btn ${runLocked ? 'active' : ''}`}
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setRunLocked((v) => {
+                                const next = !v
+                                touchRef.current.sprint = next
+                                return next
+                            })
+                        }}
+                    >
+                        RUN
+                    </button>
+                )}
+
+                {/* BOOST en toggle (voiture uniquement) */}
+                {mode === 'car' && (
+                    <button
+                        className={`touch-btn ${boostLocked ? 'active' : ''}`}
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setBoostLocked((v) => {
+                                const next = !v
+                                touchRef.current.boost = next
+                                return next
+                            })
+                        }}
+                    >
+                        BOOST
+                    </button>
+                )}
+
+                {/* DRIFT (voiture uniquement, maintenir) */}
+                {mode === 'car' && (
+                    <button
+                        className="touch-btn"
+                        onPointerDown={press('drift')}
+                        onPointerUp={release('drift')}
+                        onPointerCancel={release('drift')}
+                    >
+                        DRIFT
+                    </button>
+                )}
+
+                {/* ENTRER / SORTIR (toujours) */}
+                <button
+                    className="touch-btn"
+                    onPointerDown={press('interact')}
+                    onPointerUp={release('interact')}
+                    onPointerCancel={release('interact')}
+                >
+                    {interactLabel}
+                </button>
+            </div>
+
+        </div>
+    )
 }

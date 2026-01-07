@@ -64,7 +64,6 @@ export default function Game({ autoLock, onAutoLockDone, onMainMenu }) {
 
         if (isTouch) {
             setHasControl(true)
-            setPaused(false)
             return
         }
 

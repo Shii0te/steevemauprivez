@@ -30,6 +30,8 @@ export const Car = forwardRef(function Car(
     const steer = useRef(0)
     const drift = useRef(0)
     const yaw = useRef(0)
+    const prevInteract = useRef(false)
+
 
     /* ---------- RAYCAST ---------- */
     const wheelRay = useRef(new THREE.Raycaster())
@@ -58,6 +60,7 @@ export const Car = forwardRef(function Car(
     const vHitNormal = useRef(new THREE.Vector3())
     const vForward2 = useRef(new THREE.Vector3())
     const vReflected = useRef(new THREE.Vector3())
+    
 
     /* ---------- COLLISION ---------- */
     const BOUNCE_FORCE = 0.6
@@ -160,6 +163,30 @@ export const Car = forwardRef(function Car(
     /* ---------- LOOP ---------- */
     useFrame((_, delta) => {
         if (!carRef.current || !enabled) return
+
+        // const t = touchRef?.current
+        if (t) {
+            input.current.forward = t.moveY < -0.25
+            input.current.backward = t.moveY > 0.25
+            input.current.left = t.moveX < -0.25
+            input.current.right = t.moveX > 0.25
+
+            input.current.boost = !!t.boost
+            input.current.drift = !!t.drift
+
+            // Sortir voiture (front montant)
+            const rising = t.interact && !prevInteract.current
+            prevInteract.current = t.interact
+
+            if (rising) {
+                speed.current = 0
+                steer.current = 0
+                drift.current = 0
+                input.current.boost = false
+                setControlMode?.('player')
+            }
+        }
+
 
         // ----- MOBILE (lecture temps réel) -----
         const t = touchRef?.current
